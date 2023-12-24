@@ -1,58 +1,78 @@
-import { useState } from 'react';
-import { Alltasks } from './types/types';
-import SingleTodo from './components/SingleTodo';
-import InputFields from './components/InputFields';
-
-// interface State {
-//   filter(arg0: (todo: any) => boolean): unknown;
-
-//   id: number;
-//   todo: string;
-//   isDone: boolean;
-// }
-
-// interface Action {
-//   type: string;
-//   payload?: any;
-// }
-
-// export const reducer = (state: State, action: Action) => {
-//   switch (action.type) {
-//     case 'ADD_TODO':
-//       return [
-//         ...state,
-//         { id: Date.now(), todo: action.payload, isDone: false },
-//       ];
-//     case 'EDIT':
-//       return state.map((todo) =>
-//         todo.id === action.payload
-//           ? { ...todo, completed: !todo.completed }
-//           : todo
-//       );
-//     case 'DONE':
-//       return state.filter((todo) => todo.id !== action.payload);
-//     default:
-//       return state;
-//   }
-// };
+import React, { useState } from 'react';
+// import './App.css';
+import InputField from './components/InputField';
+import TodoList from './components/TodoList';
+import { DragDropContext, DropResult } from 'react-beautiful-dnd';
+import { Todo } from './types/types';
 
 const App: React.FC = () => {
   const [todo, setTodo] = useState<string>('');
-  const [allTasks, setAllTasks] = useState<Alltasks[]>([]);
+  const [todos, setTodos] = useState<Array<Todo>>([]);
+  const [CompletedTodos, setCompletedTodos] = useState<Array<Todo>>([]);
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (todo) {
+      setTodos([...todos, { id: Date.now(), todo, isDone: false }]);
+      setTodo('');
+    }
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source } = result;
+
+    console.log(result);
+
+    if (!destination) {
+      return;
+    }
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    let add;
+    // eslint-disable-next-line prefer-const
+    let active = todos;
+    // eslint-disable-next-line prefer-const
+    let complete = CompletedTodos;
+    // Source Logic
+    if (source.droppableId === 'TodosList') {
+      add = active[source.index];
+      active.splice(source.index, 1);
+    } else {
+      add = complete[source.index];
+      complete.splice(source.index, 1);
+    }
+
+    // Destination Logic
+    if (destination.droppableId === 'TodosList') {
+      active.splice(destination.index, 0, add);
+    } else {
+      complete.splice(destination.index, 0, add);
+    }
+
+    setCompletedTodos(complete);
+    setTodos(active);
+  };
+
   return (
-    <div className="bg-slate-500 h-screen text-center">
-      <InputFields
-        todo={todo}
-        setTodo={setTodo}
-        setAllTasks={setAllTasks}
-        allTasks={allTasks}
-      />
-      <section className="bg-green-800 max-w-screen-lg mx-auto p-6 mt-2">
-        {allTasks.map(({ todo, id }) => (
-          <SingleTodo todo={todo} id={id} key={id} isDone={false} />
-        ))}
-      </section>
-    </div>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="App">
+        <span className="heading">Taskify</span>
+        <InputField todo={todo} setTodo={setTodo} handleAdd={handleAdd} />
+        <TodoList
+          todos={todos}
+          setTodos={setTodos}
+          CompletedTodos={CompletedTodos}
+          setCompletedTodos={setCompletedTodos}
+        />
+      </div>
+    </DragDropContext>
   );
 };
 
